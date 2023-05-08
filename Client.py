@@ -23,7 +23,6 @@ CLIENT_LOG_OUT_PROTOCOL = 'quit'
 
 LARGE_FONT = ("Times New Roman", 35, "bold")
 
-PHOTOS_SAVED_FILE = 'PhotosFromServer'
 
 STORAGE_USER_NAME = []
 STORAGE_USER_PASSWORD = []
@@ -999,6 +998,13 @@ def running_gui():
 
 
 if __name__ == '__main__':
+
+    PHOTOS_SAVED_FILE = 'PhotosFromServer'
+    # Check if folder exists
+    if not os.path.exists(PHOTOS_SAVED_FILE):
+        # Create folder if it does not exist
+        os.makedirs(PHOTOS_SAVED_FILE)
+
     # local host IP '127.0.0.1'
     # host = '172.20.201.124'
     host = '127.0.0.1'
