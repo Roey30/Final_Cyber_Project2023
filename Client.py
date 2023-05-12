@@ -72,6 +72,11 @@ color = "#8370EE"
 BACKGROUND_BUTTON_COLOR = "#4B0082"
 BACKGROUND_COLOR = "#616161"
 
+NO_UNDO_LABEL = ''
+NO_PICTURE_SELECTED = ''
+
+NUMBER_PAGE = 3
+
 
 def exit_window():
     global root
@@ -129,10 +134,15 @@ def signup_function(entry_user_name, entry_password, frame):
 
 
 def select_image(frame, SELECT_IMAGE_BUTTON_value):
-    global NUMBER_PICTURE, EDIT_IMAGE, PANEL_STORAGE, LIMIT_LABEL
+    global NUMBER_PICTURE, EDIT_IMAGE, PANEL_STORAGE, LIMIT_LABEL, NO_PICTURE_SELECTED
     LIMIT_LABEL = tk.Label(frame, text="You can upload up to four pictures", bg=color, fg="white",
                            font=("Arial", 12, "bold"), padx=20, pady=20, bd=3,
                            relief=tk.RAISED)
+    if NUMBER_PICTURE >= 0:
+        if NO_PICTURE_SELECTED != '':
+            NO_PICTURE_SELECTED.place_forget()
+        if NO_UNDO_LABEL != '':
+            NO_UNDO_LABEL.place_forget()
     if EDIT_IMAGE == '':
         file_path = filedialog.askopenfilename()
         if file_path:
@@ -162,14 +172,21 @@ def select_image(frame, SELECT_IMAGE_BUTTON_value):
         frame.master.switch_frame(frame.master.picture_page_frames[0], 2)
 
 
-def undo_selected_picture(SELECT_IMAGE_BUTTON_value):
-    global STORAGE_PATH_PICTURE, PANEL_STORAGE, NUMBER_PICTURE, LIMIT_LABEL
-    if len(STORAGE_PATH_PICTURE) != 0 and len(PANEL_STORAGE) != 0:
-        STORAGE_PATH_PICTURE.pop()
-        PANEL_STORAGE.pop().place_forget()
-        NUMBER_PICTURE -= 1
-        LIMIT_LABEL.place_forget()
-        SELECT_IMAGE_BUTTON_value.config(state='active')
+def undo_selected_picture(SELECT_IMAGE_BUTTON_value, frame):
+    global STORAGE_PATH_PICTURE, PANEL_STORAGE, NUMBER_PICTURE, LIMIT_LABEL, NO_UNDO_LABEL
+    NO_UNDO_LABEL = tk.Label(frame, text="Cant undo - No picture was selected", bg=color, fg="white",
+                             font=("Arial", 12, "bold"), padx=20, pady=20,
+                             bd=3, relief=tk.RAISED)
+    if NUMBER_PICTURE == 0:
+        NO_UNDO_LABEL.place(x=840, y=665, anchor=tk.CENTER, width=280, height=20)
+    else:
+        NO_UNDO_LABEL.place_forget()
+        if len(STORAGE_PATH_PICTURE) != 0 and len(PANEL_STORAGE) != 0:
+            STORAGE_PATH_PICTURE.pop()
+            PANEL_STORAGE.pop().place_forget()
+            NUMBER_PICTURE -= 1
+            LIMIT_LABEL.place_forget()
+            SELECT_IMAGE_BUTTON_value.config(state='active')
 
 
 def login_function(entry_user_name, entry_password, frame):
@@ -290,16 +307,17 @@ def print_pictures(picture_path, frame, what_picture_page):
             PANEL = None
 
 
-def uploads_pictures_to_server(number_picture, no_picture_selected, frame, page):
+def uploads_pictures_to_server(number_picture, frame, page):
     global STORAGE_PATH_PICTURE, UPLOAD_PICTURE_BUTTON_picture_PAGE, SELECT_IMAGE_BUTTON, \
-        UPLOAD_EDIT_BUTTON
-
+        UPLOAD_EDIT_BUTTON, NO_PICTURE_SELECTED, NUMBER_PAGE
+    if NUMBER_PICTURE == 0:
+        NUMBER_PAGE = 3
+    else:
+        NUMBER_PAGE = 2
     if number_picture == 0:
-        no_picture_selected.place(x=600, y=665, anchor=tk.CENTER, width=250, height=20)
+        NO_PICTURE_SELECTED.place(x=600, y=665, anchor=tk.CENTER, width=250, height=20)
         return
     else:
-        if no_picture_selected is not None:
-            no_picture_selected.config(text=f"number of pictures were selected -> {number_picture} ")
         msg_pic_to_server = PICTURES_TO_SERVER_PROTOCOL, str(number_picture)
         not_thing = b'aaaa'
         conn.sendall(pickle.dumps(msg_pic_to_server))
@@ -325,7 +343,7 @@ def uploads_pictures_to_server(number_picture, no_picture_selected, frame, page)
                     if page == "picture_Page":
                         UPLOAD_PICTURE_BUTTON_picture_PAGE.config(state='disabled')
                         SELECT_IMAGE_BUTTON.config(state='disabled')
-                        no_picture_selected.destroy()
+                        NO_PICTURE_SELECTED.destroy()
                         tk.Label(frame, text="You have successfully uploaded the picture to the server", bg="black",
                                  fg="white",
                                  font=("Arial", 12, "bold"), padx=20,
@@ -808,10 +826,13 @@ class PictureSelfPage(tk.Frame):
 class EditPicturesPage(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
-        global EDIT_IMAGE, PANEL, EDIT_IMAGE_PATH, UPLOAD_EDIT_BUTTON, picture, \
+        global EDIT_IMAGE, PANEL, EDIT_IMAGE_PATH, UPLOAD_EDIT_BUTTON, picture, NUMBER_PAGE, \
             DOWN_LOAD_PICTURE_BUTTON, VERSION, IMAGE_PIL, IMG, IMAGE_AFTER_EDIT, PANEL_EDITED_IMAGE, NO_EDIT_LABEL, NAME_FIRST_LABEL
         self.configure(bg=BACKGROUND_COLOR)
-        number_page = 3
+        if NUMBER_PICTURE == 0:
+            NUMBER_PAGE = 3
+        else:
+            NUMBER_PAGE = 2
         tk.Label(self, text="Edit pictures Page", font=LARGE_FONT, bg=BACKGROUND_COLOR, fg="white", padx=20,
                  pady=20, bd=3). \
             place(x=600, y=20, anchor=tk.CENTER, width=1200, height=80)
@@ -824,13 +845,12 @@ class EditPicturesPage(tk.Frame):
         UPLOAD_EDIT_BUTTON = tk.Button(self, text="To upload the picture", bg=color, fg="white",
                                        font=("Arial", 12, "bold"), padx=20, pady=20, bd=3,
                                        activebackground=BACKGROUND_BUTTON_COLOR, state='disabled',
-                                       command=lambda: (number_page == 2,
-                                                        STORAGE_PATH_PICTURE.append((
+                                       command=lambda: (STORAGE_PATH_PICTURE.append((
                                                                                     f"{SELECTED_IMAGE_TO_EDIT.split('.JPG')[0]}_{picture_name.get().replace(' ', '_')}.JPG",
                                                                                     f"{picture}-{picture_name.get().replace(' ', '_')}",
                                                                                     int(VERSION) + 1)),
                                                         print(f"path storage: {STORAGE_PATH_PICTURE}"),
-                                                        uploads_pictures_to_server(1, None, self, "Edit_Page"),
+                                                        uploads_pictures_to_server(1, self, "Edit_Page"),
                                                         NAME_FIRST_LABEL.place_forget()))
         DOWN_LOAD_PICTURE_BUTTON = tk.Button(self, text="To download the picture", bg=color, fg="white",
                                              font=("Arial", 12, "bold"), padx=20, pady=20, bd=3, relief=tk.RAISED,
@@ -865,7 +885,7 @@ class EditPicturesPage(tk.Frame):
             picture_name.place(x=600, y=635, anchor=tk.CENTER, width=300, height=30)
         tk.Button(self, text="Back to pictures Page", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20,
                   pady=20, bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
-                  command=lambda: (master.switch_frame(master.picture_page_frames[0], number_page), reset_marked_image())). \
+                  command=lambda: (master.switch_frame(master.picture_page_frames[0], NUMBER_PAGE), reset_marked_image())). \
             place(x=150, y=700, anchor=tk.CENTER, width=300, height=50)
         NAME_FIRST_LABEL = tk.Label(self, text='You need to enter name first', bg="black", fg="white",
                                     font=("Arial", 12, "bold"), padx=20, pady=20, bd=3, relief=tk.RAISED)
@@ -953,10 +973,10 @@ class UploadPicturesPage(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
         global NUMBER_PICTURE, STORAGE_PATH_PICTURE, UPLOAD_PICTURE_BUTTON_picture_PAGE, SELECT_IMAGE_BUTTON, EDIT_IMAGE, \
-            PANEL_STORAGE
+            PANEL_STORAGE, NO_PICTURE_SELECTED, NUMBER_PAGE
         self.configure(bg=BACKGROUND_COLOR)
-        number_page = 3
-        no_picture_selected = tk.Label(self, text="No picture was selected", bg=color, fg="white",
+
+        NO_PICTURE_SELECTED = tk.Label(self, text="No picture was selected", bg=color, fg="white",
                                        font=("Arial", 12, "bold"), padx=20, pady=20,
                                        bd=3, relief=tk.RAISED)
         tk.Label(self, text="Upload pictures Page", bg=BACKGROUND_COLOR, fg="white", font=LARGE_FONT, padx=20,
@@ -977,15 +997,15 @@ class UploadPicturesPage(tk.Frame):
                                                        font=("Arial", 12, "bold"), padx=20, pady=20, bd=3,
                                                        relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                                                        command=lambda: (uploads_pictures_to_server
-                                                                        (NUMBER_PICTURE, no_picture_selected, self,
-                                                                         "picture_Page"), number_page == 2))
+                                                                        (NUMBER_PICTURE, self,
+                                                                         "picture_Page")))
         undo_upload_button = tk.Button(self, text="Undo recent pic", bg=color, fg="white",
                                        font=("Arial", 12, "bold"), padx=20, pady=20, bd=3,
                                        relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
-                                       command=lambda: undo_selected_picture(SELECT_IMAGE_BUTTON))
+                                       command=lambda: undo_selected_picture(SELECT_IMAGE_BUTTON, self))
         tk.Button(self, text="To pictures page", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
                   bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
-                  command=lambda: master.switch_frame(master.picture_page_frames[0], number_page)). \
+                  command=lambda: master.switch_frame(master.picture_page_frames[0], NUMBER_PAGE)). \
             place(x=120, y=700, anchor=tk.CENTER, width=240, height=50)
 
         NUMBER_PICTURE = 0
