@@ -213,14 +213,6 @@ def receive(c):
             elif data is None:
                 print('Bye')
                 print(f"connection {gDict.pop(c)} Has disconnected")
-                print(f"user {userDict.pop(c)} Has disconnected")
-                print("All the users:")
-                if len(userDict) == 0:
-                    print("No user is connected")
-                else:
-                    for u in userDict:
-                        print(f"User: {userDict[u]}")
-
                 # lock released on exit
                 # print_lock.release()
                 exit_thread()
@@ -228,22 +220,19 @@ def receive(c):
             if not data or data == 'quit':
                 print('Bye')
                 print(f"connection {gDict.pop(c)} has disconnected")
-                print(f"user {userDict.pop(c)} Has disconnected")
-                print("All the users:")
-                if len(userDict) == 0:
-                    print("No user is connected")
-                else:
-                    for u in userDict:
-                        print(f"User: {userDict[u]}")
+                client_back_to_start(c)
                 # lock released on exit
                 # print_lock.release()
                 exit_thread()
                 break
             broadcast(c, data)
-    except EOFError as err:
+    except EOFError and ConnectionResetError as err:
         print(f"Something came up2: {err}")
         print(f"connection {gDict.pop(c)} Has disconnected")
-        print(f"{userDict.pop(c)} Has disconnected")
+        if len(userDict) != 0:
+            print(f"{userDict.pop(c)} Has disconnected")
+        else:
+            print(f"No user was connected")
     finally:
         c.close()
 
