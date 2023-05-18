@@ -3,6 +3,7 @@ import io
 import socket
 import ssl
 import pickle
+import hashlib
 from _thread import *
 from PIL import Image
 import sqlite3
@@ -42,6 +43,8 @@ PHOTOS_SAVED_FILE = 'PhotosToServer'
 
 def sign_in(username, password, c):
     permission = False
+    hashed_password = hashlib.md5(password.encode()).hexdigest()
+
     if username == 'RoeyFiran':
         if password == 'RoeyFiran12345':
             permission = True
@@ -54,11 +57,11 @@ def sign_in(username, password, c):
         cursor = connection_data.cursor()
 
         cursor.execute("INSERT INTO username_password_storage (name, password, permission) VALUES (?, ?, ?)",
-                       (username, password, permission))
+                       (username, hashed_password, permission))
         connection_data.commit()
         connection_data.close()
 
-        PASSWORD_STORAGE.append(password)
+        PASSWORD_STORAGE.append(hashed_password)
         USERNAME_STORAGE.append(username)
         print(f'The username storage: {USERNAME_STORAGE}')
         print(f'The password storage: {PASSWORD_STORAGE}')
@@ -66,6 +69,8 @@ def sign_in(username, password, c):
 
 def log_in(username, password, c):
     global USERNAME_STORAGE, PASSWORD_STORAGE
+    hashed_password = hashlib.md5(password.encode()).hexdigest()
+
     place = 0
     username_password_exist = pickle.dumps('False')
     connection_data = sqlite3.connect("username_password_storage.db")
@@ -79,7 +84,7 @@ def log_in(username, password, c):
     for u in users:
         if username == u[1]:
             print("Username - True")
-            if password == users[place][2]:
+            if hashed_password == users[place][2]:
                 print("Password - True")
                 print(len(userDict))
                 if len(userDict) == 0:
