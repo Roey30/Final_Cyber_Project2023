@@ -307,6 +307,12 @@ def main():
 
 
 if __name__ == '__main__':
+    PHOTOS_SAVED_FILE = 'PhotosToServer'
+    # Check if folder exists
+    if not os.path.exists(PHOTOS_SAVED_FILE):
+        # Create folder if it does not exist
+        os.makedirs(PHOTOS_SAVED_FILE)
+        
     connect_data = sqlite3.connect("username_password_storage.db")
     user = connect_data.cursor()
 
