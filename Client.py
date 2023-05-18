@@ -82,16 +82,21 @@ NUMBER_PAGE = 3
 def exit_window():
     global root
     print("GoodBye")
-    msg = CLIENT_LOG_OUT_PROTOCOL
-    conn.sendall(pickle.dumps(msg))
-    root.quit()
-    all_files = os.listdir(PHOTOS_SAVED_FILE)
-    for file_name in all_files:
-        file_path = os.path.join(PHOTOS_SAVED_FILE, file_name)
-        if os.path.isdir(file_path):
-            shutil.rmtree(file_path)
-        else:
-            os.remove(file_path)
+    try:
+        msg = CLIENT_LOG_OUT_PROTOCOL
+        conn.sendall(pickle.dumps(msg))
+    except ssl.SSLError as err:
+        print(f"Something went wrong with the server: {err}")
+        conn.close()
+    finally:
+        root.quit()
+        all_files = os.listdir(PHOTOS_SAVED_FILE)
+        for file_name in all_files:
+            file_path = os.path.join(PHOTOS_SAVED_FILE, file_name)
+            if os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+            else:
+                os.remove(file_path)
 
 
 def exist_check():
