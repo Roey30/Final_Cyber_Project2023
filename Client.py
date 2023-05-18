@@ -13,6 +13,7 @@ PORT = 8443
 MSG_LEN = 1024
 EXIT_CMD = 'bye bye'
 USER_INPUT = 'please enter a command'
+result = 0
 
 LOG_IN_CLIENT_PROTOCOL = 'LICP'
 SIGN_UP_CLIENT_PROTOCOL = 'SICP'
@@ -192,31 +193,36 @@ def undo_selected_picture(SELECT_IMAGE_BUTTON_value, frame):
 def login_function(entry_user_name, entry_password, frame):
     # sends the username and the password to the sever for checking them in the database
     global ACCESS, USER_NAME
-    ACCESS = False
-    print(f'User name: {entry_user_name.get()}, Password: {entry_password.get()}')
-    msg = LOG_IN_CLIENT_PROTOCOL, entry_user_name.get(), entry_password.get()
-    print(f"The msg: {msg}")
-    incorrect_label = tk.Label(frame, text="Your username or password is incorrect", bg="black", fg="white",
-                               font=("Arial", 12, "bold"), padx=20,
-                               pady=20, bd=3, relief=tk.RAISED)
-    connected_label = tk.Label(frame, text="This user name is already connected", bg="black", fg="white",
-                               font=("Arial", 12, "bold"), padx=20,
-                               pady=20, bd=3, relief=tk.RAISED)
-    conn.sendall(pickle.dumps(msg))
-    access = pickle.loads(conn.recv(1024))
-    if access == 'True':
-        print(f'Yes - access = {access}')
-        USER_NAME = entry_user_name.get()
-        frame.master.create_picture_page_frames()
-        frame.master.switch_frame(frame.master.picture_page_frames[0], 2)
-    elif access == 'Taken':
-        print(f'No - access = {access}')
-        incorrect_label.destroy()
-        connected_label.place(x=300, y=550, anchor=tk.CENTER, width=500, height=50)
-    elif access == 'False':
-        print(f'No - access = {access}')
-        connected_label.destroy()
-        incorrect_label.place(x=300, y=550, anchor=tk.CENTER, width=500, height=50)
+    try:
+        ACCESS = False
+        print(f'User name: {entry_user_name.get()}, Password: {entry_password.get()}')
+        msg = LOG_IN_CLIENT_PROTOCOL, entry_user_name.get(), entry_password.get()
+        print(f"The msg: {msg}")
+        incorrect_label = tk.Label(frame, text="Your username or password is incorrect", bg="black", fg="white",
+                                   font=("Arial", 12, "bold"), padx=20,
+                                   pady=20, bd=3, relief=tk.RAISED)
+        connected_label = tk.Label(frame, text="This user name is already connected", bg="black", fg="white",
+                                   font=("Arial", 12, "bold"), padx=20,
+                                   pady=20, bd=3, relief=tk.RAISED)
+        conn.sendall(pickle.dumps(msg))
+        access = pickle.loads(conn.recv(1024))
+        if access == 'True':
+            print(f'Yes - access = {access}')
+            USER_NAME = entry_user_name.get()
+            frame.master.create_picture_page_frames()
+            frame.master.switch_frame(frame.master.picture_page_frames[0], 2)
+        elif access == 'Taken':
+            print(f'No - access = {access}')
+            incorrect_label.destroy()
+            connected_label.place(x=300, y=550, anchor=tk.CENTER, width=500, height=50)
+        elif access == 'False':
+            print(f'No - access = {access}')
+            connected_label.destroy()
+            incorrect_label.place(x=300, y=550, anchor=tk.CENTER, width=500, height=50)
+    except ssl.SSLError as err:
+        print(f"Something went wrong with the server: {err}")
+        conn.close()
+        root.quit()
 
 
 def marked_image(image, button_image, frame, path, picture_name, pic_ver, image_PIL):
@@ -310,88 +316,98 @@ def print_pictures(picture_path, frame, what_picture_page):
 def uploads_pictures_to_server(number_picture, frame, page):
     global STORAGE_PATH_PICTURE, UPLOAD_PICTURE_BUTTON_picture_PAGE, SELECT_IMAGE_BUTTON, \
         UPLOAD_EDIT_BUTTON, NO_PICTURE_SELECTED, NUMBER_PAGE
-    if NUMBER_PICTURE == 0:
-        NUMBER_PAGE = 3
-    else:
-        NUMBER_PAGE = 2
-    if number_picture == 0:
-        NO_PICTURE_SELECTED.place(x=600, y=665, anchor=tk.CENTER, width=250, height=20)
-        return
-    else:
-        msg_pic_to_server = PICTURES_TO_SERVER_PROTOCOL, str(number_picture)
-        not_thing = b'aaaa'
-        conn.sendall(pickle.dumps(msg_pic_to_server))
-        print(f"storage paths: {STORAGE_PATH_PICTURE} ")
-        num_pic = 0
-        pic = ''
-        while True:
+    try:
+        if NUMBER_PICTURE == 0:
+            NUMBER_PAGE = 3
+        else:
+            NUMBER_PAGE = 2
+        if number_picture == 0:
+            NO_PICTURE_SELECTED.place(x=600, y=665, anchor=tk.CENTER, width=250, height=20)
+            return
+        else:
+            msg_pic_to_server = PICTURES_TO_SERVER_PROTOCOL, str(number_picture)
+            not_thing = b'aaaa'
+            conn.sendall(pickle.dumps(msg_pic_to_server))
+            print(f"storage paths: {STORAGE_PATH_PICTURE} ")
+            num_pic = 0
+            pic = ''
             while True:
-                if num_pic != len(STORAGE_PATH_PICTURE):
-                    pic = STORAGE_PATH_PICTURE[num_pic]
-                msg_from_server = pickle.loads(conn.recv(1024))
-                if msg_from_server == 'ok':
-                    with open(pic[0], 'rb') as f:
-                        image_data = f.read()
-                    conn.sendall(image_data)
-                    conn.sendall(not_thing)
-                if msg_from_server == 'got it':
-                    conn.sendall(pickle.dumps(pic[1]))
-                    conn.sendall((pickle.dumps(pic[2])))
-                    num_pic += 1
-                elif msg_from_server == 'Finish':
-                    STORAGE_PATH_PICTURE = []
-                    if page == "picture_Page":
-                        UPLOAD_PICTURE_BUTTON_picture_PAGE.config(state='disabled')
-                        SELECT_IMAGE_BUTTON.config(state='disabled')
-                        NO_PICTURE_SELECTED.destroy()
-                        tk.Label(frame, text="You have successfully uploaded the picture to the server", bg="black",
-                                 fg="white",
-                                 font=("Arial", 12, "bold"), padx=20,
-                                 pady=20, bd=3, relief=tk.RAISED). \
-                            place(x=600, y=665, anchor=tk.CENTER, width=450, height=20)
-                    elif page == "Edit_Page":
-                        UPLOAD_EDIT_BUTTON.config(state='disabled')
-                        tk.Label(frame, text="You have successfully uploaded the picture to the server", bg="black",
-                                 fg="white",
-                                 font=("Arial", 12, "bold"), padx=20,
-                                 pady=20, bd=3, relief=tk.RAISED). \
-                            place(x=450, y=635, anchor='w', width=450, height=30)
-                    return
+                while True:
+                    if num_pic != len(STORAGE_PATH_PICTURE):
+                        pic = STORAGE_PATH_PICTURE[num_pic]
+                    msg_from_server = pickle.loads(conn.recv(1024))
+                    if msg_from_server == 'ok':
+                        with open(pic[0], 'rb') as f:
+                            image_data = f.read()
+                        conn.sendall(image_data)
+                        conn.sendall(not_thing)
+                    if msg_from_server == 'got it':
+                        conn.sendall(pickle.dumps(pic[1]))
+                        conn.sendall((pickle.dumps(pic[2])))
+                        num_pic += 1
+                    elif msg_from_server == 'Finish':
+                        STORAGE_PATH_PICTURE = []
+                        if page == "picture_Page":
+                            UPLOAD_PICTURE_BUTTON_picture_PAGE.config(state='disabled')
+                            SELECT_IMAGE_BUTTON.config(state='disabled')
+                            NO_PICTURE_SELECTED.destroy()
+                            tk.Label(frame, text="You have successfully uploaded the picture to the server", bg="black",
+                                     fg="white",
+                                     font=("Arial", 12, "bold"), padx=20,
+                                     pady=20, bd=3, relief=tk.RAISED). \
+                                place(x=600, y=665, anchor=tk.CENTER, width=450, height=20)
+                        elif page == "Edit_Page":
+                            UPLOAD_EDIT_BUTTON.config(state='disabled')
+                            tk.Label(frame, text="You have successfully uploaded the picture to the server", bg="black",
+                                     fg="white",
+                                     font=("Arial", 12, "bold"), padx=20,
+                                     pady=20, bd=3, relief=tk.RAISED). \
+                                place(x=450, y=635, anchor='w', width=450, height=30)
+                        return
+    except ssl.SSLError as err:
+        print(f"Something went wrong with the server: {err}")
+        conn.close()
+        root.quit()
 
 
 def get_pictures_from_server():
-    msg_pic_to_client = PICTURES_TO_CLIENT_PROTOCOL
-    conn.sendall(pickle.dumps(msg_pic_to_client))
-    number_picture = conn.recv(1024)
-    number_picture = int(pickle.loads(number_picture))
-    while number_picture > 0:
-        image_data = b''
-        conn.sendall(pickle.dumps('ok'))
-        while True:
-            data = conn.recv(4096)
-            if data[-4:][:4] == b'aaaa':
-                conn.sendall(pickle.dumps("got it"))
-                picture_name = pickle.loads(conn.recv(1024))
-                picture_version = pickle.loads(conn.recv(1024))
-                image_data += data[:-4]
-                break
+    try:
+        msg_pic_to_client = PICTURES_TO_CLIENT_PROTOCOL
+        conn.sendall(pickle.dumps(msg_pic_to_client))
+        number_picture = conn.recv(1024)
+        number_picture = int(pickle.loads(number_picture))
+        while number_picture > 0:
+            image_data = b''
+            conn.sendall(pickle.dumps('ok'))
+            while True:
+                data = conn.recv(4096)
+                if data[-4:][:4] == b'aaaa':
+                    conn.sendall(pickle.dumps("got it"))
+                    picture_name = pickle.loads(conn.recv(1024))
+                    picture_version = pickle.loads(conn.recv(1024))
+                    image_data += data[:-4]
+                    break
+                else:
+                    image_data += data
+
+            # Convert the image data into an image object
+            picture_name = picture_name.split('.')
+            picture_name = picture_name[0]
+            image = Image.open(io.BytesIO(image_data))
+
+            image_path = f"{PHOTOS_SAVED_FILE}/{picture_name}.JPG"
+            image.save(image_path, format='PNG')
+            STORAGE_PICTURE.append((image_path, picture_name, picture_version))
+            if picture_version == 1:
+                STORAGE_PICTURE_VER1.append((image_path, picture_name, picture_version))
             else:
-                image_data += data
-
-        # Convert the image data into an image object
-        picture_name = picture_name.split('.')
-        picture_name = picture_name[0]
-        image = Image.open(io.BytesIO(image_data))
-
-        image_path = f"{PHOTOS_SAVED_FILE}/{picture_name}.JPG"
-        image.save(image_path, format='PNG')
-        STORAGE_PICTURE.append((image_path, picture_name, picture_version))
-        if picture_version == 1:
-            STORAGE_PICTURE_VER1.append((image_path, picture_name, picture_version))
-        else:
-            STORAGE_PICTURE_VER2.append((image_path, picture_name, picture_version))
-        number_picture -= 1
-    return
+                STORAGE_PICTURE_VER2.append((image_path, picture_name, picture_version))
+            number_picture -= 1
+        return
+    except ssl.SSLError as err:
+        print(f"Some went wrong with the server: {err}")
+        conn.close()
+        root.quit()
 
 
 def download_picture(picture_name):
@@ -411,8 +427,13 @@ def download_picture(picture_name):
 
 
 def client_back_to_start():
-    msg = CLIENT_BACK_TO_START_PROTOCOL
-    conn.sendall(pickle.dumps(msg))
+    try:
+        msg = CLIENT_BACK_TO_START_PROTOCOL
+        conn.sendall(pickle.dumps(msg))
+    except ssl.SSLError as err:
+        print(f"Something went wrong with the server: {err}")
+        conn.close()
+        root.quit()
 
 
 def switch_pictures_page(frame, pic_name, num):
@@ -1029,10 +1050,6 @@ if __name__ == '__main__':
         # Create folder if it does not exist
         os.makedirs(PHOTOS_SAVED_FILE)
 
-    # local host IP '127.0.0.1'
-    # host = '172.20.201.124'
-    host = '127.0.0.1'
-    port = 42069
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     root = MainWindow()
     context = ssl.create_default_context()
@@ -1042,12 +1059,14 @@ if __name__ == '__main__':
     my_socket = socket.socket()
     conn = context.wrap_socket(my_socket, server_hostname=HOST_NAME)
     try:
-        conn.connect((HOST_NAME, PORT))
+        result = conn.connect_ex((HOST_NAME, PORT))
         print("Connected to Server: ", conn.getsockname())
         running_gui()
     except socket.error as socket_err:
         print(f"Something came up: {socket_err}")
     finally:
-        exit_window()
+        result = my_socket.connect_ex((HOST_NAME, PORT))
+        if result == 0:
+            exit_window()
         conn.close()
         quit()
