@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import io
+import os
 import socket
 import ssl
 import pickle
@@ -135,66 +136,80 @@ def exist_signin_check(username):
 
 
 def serverside_picture_handle(c, number_pictures):
-    number_pictures = int(number_pictures)
-    while number_pictures > 0:
-        image_data = b''
-        c.sendall(pickle.dumps('ok'))
-        while True:
-            data = c.recv(4096)
-            print(f"\nThe data: {data}")
-            if data[-4:][:4] == b'aaaa':
-                c.sendall(pickle.dumps("got it"))
-                picture_name = pickle.loads(c.recv(1024))
-                version = pickle.loads(c.recv(1024))
-                print("hellllllooooo")
-                image_data += data[:-4]
-                break
-            else:
-                image_data += data
+    try:
+        number_pictures = int(number_pictures)
+        while number_pictures > 0:
+            image_data = b''
+            c.sendall(pickle.dumps('ok'))
+            while True:
+                data = c.recv(4096)
+                if data[-4:][:4] == b'aaaa':
+                    c.sendall(pickle.dumps("got it"))
+                    picture_name = pickle.loads(c.recv(1024))
+                    version = pickle.loads(c.recv(1024))
+                    print("hellllllooooo")
+                    image_data += data[:-4]
+                    break
+                else:
+                    image_data += data
 
-        # Convert the image data into an image object
-        picture_name = picture_name.split('.')
-        picture_name = picture_name[0]
-        image = Image.open(io.BytesIO(image_data))
+            # Convert the image data into an image object
+            picture_name = picture_name.split('.')
+            picture_name = picture_name[0]
+            image = Image.open(io.BytesIO(image_data))
 
-        image_path = f"{PHOTOS_SAVED_FILE}/{picture_name}.JPG"
-        image.save(image_path, format='PNG')
-        connection_data = sqlite3.connect("picture_database.db")
-        cursor = connection_data.cursor()
+            image_path = f"{PHOTOS_SAVED_FILE}/{picture_name}.JPG"
+            image.save(image_path, format='PNG')
+            connection_data = sqlite3.connect("picture_database.db")
+            cursor = connection_data.cursor()
 
-        cursor.execute("INSERT INTO PICTURES (NAME, FILE_PATH, Version) VALUES (?, ?, ?)",
-                       (picture_name, image_path, version))
-        connection_data.commit()
-        connection_data.close()
-        PICTURES_STORAGE.append((image_path, picture_name))
-        number_pictures -= 1
-        print(PICTURES_STORAGE)
-    c.sendall(pickle.dumps('Finish'))
+            cursor.execute("INSERT INTO PICTURES (NAME, FILE_PATH, Version) VALUES (?, ?, ?)",
+                           (picture_name, image_path, version))
+            connection_data.commit()
+            connection_data.close()
+            PICTURES_STORAGE.append((image_path, picture_name))
+            number_pictures -= 1
+            print(PICTURES_STORAGE)
+        c.sendall(pickle.dumps('Finish'))
+    except EOFError and ConnectionResetError as err:
+        print(f"Something came up2: {err}")
+        print(f"connection {gDict.pop(c)} Has disconnected")
+        if len(userDict) != 0:
+            print(f"{userDict.pop(c)} Has disconnected")
+        else:
+            print(f"No user was connected")
 
 
 def clientside_picture_handle(c):
-    print("Helllloooo")
-    connection_data = sqlite3.connect("picture_database.db")
-    cursor = connection_data.cursor()
+    try:
+        connection_data = sqlite3.connect("picture_database.db")
+        cursor = connection_data.cursor()
 
-    cursor.execute("SELECT * FROM PICTURES")
-    users = cursor.fetchall()
+        cursor.execute("SELECT * FROM PICTURES")
+        users = cursor.fetchall()
 
-    connection_data.close()
-    msg_pic_to_client = str(len(users))
-    not_thing = b'aaaa'
-    print(msg_pic_to_client, type(msg_pic_to_client))
-    c.sendall(pickle.dumps(msg_pic_to_client))
-    print(f"storage paths: {users} ")
-    for i in users:
-        with open(i[2], 'rb') as f:
-            image_data = f.read()
-        if pickle.loads(c.recv(1024)) == 'ok':
-            c.sendall(image_data)
-            c.sendall(not_thing)
-        if pickle.loads(c.recv(1024)) == 'got it':
-            c.sendall(pickle.dumps(i[1]))
-            c.sendall(pickle.dumps(i[3]))
+        connection_data.close()
+        msg_pic_to_client = str(len(users))
+        not_thing = b'aaaa'
+        print(msg_pic_to_client, type(msg_pic_to_client))
+        c.sendall(pickle.dumps(msg_pic_to_client))
+        print(f"storage paths: {users} ")
+        for i in users:
+            with open(i[2], 'rb') as f:
+                image_data = f.read()
+            if pickle.loads(c.recv(1024)) == 'ok':
+                c.sendall(image_data)
+                c.sendall(not_thing)
+            if pickle.loads(c.recv(1024)) == 'got it':
+                c.sendall(pickle.dumps(i[1]))
+                c.sendall(pickle.dumps(i[3]))
+    except EOFError and ConnectionResetError as err:
+        print(f"Something came up2: {err}")
+        print(f"connection {gDict.pop(c)} Has disconnected")
+        if len(userDict) != 0:
+            print(f"{userDict.pop(c)} Has disconnected")
+        else:
+            print(f"No user was connected")
 
 
 def receive(c):
@@ -202,6 +217,15 @@ def receive(c):
         while True:
             # data received from client
             data = c.recv(1024)
+            if data == b'':
+                print('Bye')
+                print(f"connection {gDict.pop(c)} Has disconnected")
+                if len(userDict) != 0:
+                    print(f"{userDict.pop(c)} Has disconnected")
+                # lock released on exit
+                # print_lock.release()
+                exit_thread()
+                break
             data = pickle.loads(data)
             print(f'The data: {data}')
             # print(f'The data decoded: {data[0].decode()} , {data[1].decode()}')
@@ -215,13 +239,6 @@ def receive(c):
                 clientside_picture_handle(c)
             elif data == CLIENT_BACK_TO_START_PROTOCOL:
                 client_back_to_start(c)
-            elif data is None:
-                print('Bye')
-                print(f"connection {gDict.pop(c)} Has disconnected")
-                # lock released on exit
-                # print_lock.release()
-                exit_thread()
-                break
             if not data or data == 'quit':
                 print('Bye')
                 print(f"connection {gDict.pop(c)} has disconnected")
@@ -307,12 +324,11 @@ def main():
 
 
 if __name__ == '__main__':
-    PHOTOS_SAVED_FILE = 'PhotosToServer'
     # Check if folder exists
     if not os.path.exists(PHOTOS_SAVED_FILE):
         # Create folder if it does not exist
         os.makedirs(PHOTOS_SAVED_FILE)
-        
+
     connect_data = sqlite3.connect("username_password_storage.db")
     user = connect_data.cursor()
 
