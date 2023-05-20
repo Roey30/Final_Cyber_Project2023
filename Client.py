@@ -1,3 +1,7 @@
+"""
+
+"""
+# IMPORTS: 
 import io
 import os
 import shutil
@@ -8,13 +12,14 @@ import socket
 import ssl
 import pickle
 
+# CONSTANTS: 
+# CONNECTIONS VARIABLES:
 HOST_NAME = "127.0.0.1"
 PORT = 8443
 MSG_LEN = 1024
-EXIT_CMD = 'bye bye'
-USER_INPUT = 'please enter a command'
-result = 0
+RESULT = 0
 
+# CONNECTIONS PROTOCOL:
 LOG_IN_CLIENT_PROTOCOL = 'LICP'
 SIGN_UP_CLIENT_PROTOCOL = 'SICP'
 PICTURES_TO_SERVER_PROTOCOL = 'ptsp'
@@ -22,8 +27,7 @@ PICTURES_TO_CLIENT_PROTOCOL = 'ptcp'
 CLIENT_BACK_TO_START_PROTOCOL = 'CBTSP'
 CLIENT_LOG_OUT_PROTOCOL = 'quit'
 
-LARGE_FONT = ("Times New Roman", 35, "bold")
-
+# LISTS OF VARIABLES:
 STORAGE_USER_NAME = []
 STORAGE_USER_PASSWORD = []
 STORAGE_PICTURE = []
@@ -31,55 +35,67 @@ STORAGE_PICTURE_VER1 = []
 STORAGE_PICTURE_VER2 = []
 STORAGE_PATH_PICTURE = []
 PANEL_STORAGE = []
+UNDO_STACK = []
+
+# USERNAME AND PASSWORD: 
 USER_NAME = ''
 PASSWORD = ''
-COUNT_PICTURE = 1
 
+# IMAGE RELATED: 
 EDIT_IMAGE = ''
 EDIT_IMAGE_PATH = ''
 IMAGE_PIL = ''
 IMG = ''
+PANEL_EDITED_IMAGE = ''
 IMAGE_AFTER_EDIT = ''
-BUTTON_IMAGE = ''
 SELECTED_IMAGE_TO_EDIT = ''
-IF_IMAGE_PRESSED = False
 NUMBER_PICTURE = 0
-RESET_BUTTON = ''
-LIMIT_LABEL = ''
-NAME_FIRST_LABEL = ''
+COUNT_PICTURE = 1
+COUNT_PICTURE_VAR2 = 0
+picture = ''
+VERSION = ''
+IMG_TK = ''
 
 PANEL = None
-PANEL_EDITED_IMAGE = ''
 ACCESS = False
-UPLOAD_PICTURE_BUTTON_picture_PAGE = ''
+IF_IMAGE_PRESSED = False
+
+
+# BUTTONS: 
+UPLOAD_PICTURE_BUTTON_PICTURE_PAGE = ''
+BUTTON_IMAGE = ''
+RESET_BUTTON = ''
 UPLOAD_EDIT_BUTTON = ''
-NO_EDIT_LABEL = ''
 DOWN_LOAD_PICTURE_BUTTON = ''
 SELECT_IMAGE_BUTTON = ''
 SIGN_UP_BUTTON = ''
-SIGN_UP_WRONG_LABEL = ''
-SIGN_UP_TAKEN_LABEL = ''
-
 NO_PICTURE_WAS_SELECTED_BUTTON = ''
 
-picture = ''
-VERSION = ''
-COUNT_PICTURE_VAR2 = 0
+# LABELS:
+LIMIT_LABEL = ''
+NAME_FIRST_LABEL = ''
+NO_EDIT_LABEL = ''
+SIGN_UP_TAKEN_LABEL = ''
+NO_UNDO_LABEL = ''
+IMAGE_INFO_LABEL = ''
+SIGN_UP_WRONG_LABEL = ''
+NO_PICTURE_SELECTED = ''
 
-UNDO_STACK = []
-IMG_TK = ''
-
-color = "#8370EE"
+# FONTS AND COLORS(FOR LABELS AND BUTTONS): 
+LARGE_FONT = ("Times New Roman", 35, "bold")
+COLOR = "#8370EE"
 BACKGROUND_BUTTON_COLOR = "#4B0082"
 BACKGROUND_COLOR = "#616161"
 
-NO_UNDO_LABEL = ''
-NO_PICTURE_SELECTED = ''
 
 NUMBER_PAGE = 3
 
 
 def exit_window():
+    """
+    
+    :return: 
+    """
     global root
     print("GoodBye")
     try:
@@ -100,37 +116,51 @@ def exit_window():
 
 
 def exist_check():
-    if pickle.loads(conn.recv(1024)) == 'True':
+    """
+    
+    :return: 
+    """
+    if pickle.loads(conn.recv(MSG_LEN)) == 'True':
         return True
     else:
         return False
 
 
 def signup_function(entry_user_name, entry_password, frame):
+    """
+    
+    :param entry_user_name: 
+    :param entry_password: 
+    :param frame: 
+    :return: 
+    """
     global USER_NAME, PASSWORD, SIGN_UP_BUTTON, SIGN_UP_WRONG_LABEL, SIGN_UP_TAKEN_LABEL
     USER_NAME = entry_user_name.get()
     PASSWORD = entry_password.get()
     msg = SIGN_UP_CLIENT_PROTOCOL, USER_NAME, PASSWORD
-    if USER_NAME == '' or PASSWORD == '':
+    if SIGN_UP_WRONG_LABEL == '' and SIGN_UP_TAKEN_LABEL == '':
         SIGN_UP_WRONG_LABEL = tk.Label(frame, text="Something went wrong please try again", bg="black", fg="white",
                                        font=("Arial", 12, "bold"), padx=20, pady=20,
                                        bd=3, relief=tk.RAISED)
+        SIGN_UP_TAKEN_LABEL = tk.Label(frame, text="This user name is taken", bg="black", fg="white",
+                                       font=("Arial", 12, "bold"), padx=20,
+                                       pady=20, bd=3, relief=tk.RAISED)
+    if USER_NAME == '' or PASSWORD == '':
+        SIGN_UP_TAKEN_LABEL.place_forget()
         SIGN_UP_WRONG_LABEL.place(x=300, y=550, anchor=tk.CENTER, width=500, height=50)
         return
     else:
         conn.sendall(pickle.dumps(msg))
         if exist_check():
-            SIGN_UP_TAKEN_LABEL = tk.Label(frame, text="This user name is taken", bg="black", fg="white",
-                                           font=("Arial", 12, "bold"), padx=20,
-                                           pady=20, bd=3, relief=tk.RAISED)
+            SIGN_UP_WRONG_LABEL.place_forget()
             SIGN_UP_TAKEN_LABEL.place(x=300, y=550, anchor=tk.CENTER, width=500, height=50)
         else:
+            SIGN_UP_WRONG_LABEL.place_forget()
+            SIGN_UP_TAKEN_LABEL.destroy()
             tk.Label(frame, text="Successful Sign Up ", bg="black", fg="white", font=("Arial", 12, "bold"), padx=20,
                      pady=20,
                      bd=3, relief=tk.RAISED).place(x=300, y=550, anchor=tk.CENTER, width=300, height=50)
             SIGN_UP_BUTTON.config(state='disabled')
-            SIGN_UP_WRONG_LABEL.place_forget()
-            SIGN_UP_TAKEN_LABEL.place_forget()
             print(f"Your username -> {USER_NAME}")
             print(f"Your the password -> {PASSWORD} <-")
             # sends the username and the password to server for storage them in the database
@@ -140,8 +170,14 @@ def signup_function(entry_user_name, entry_password, frame):
 
 
 def select_image(frame, SELECT_IMAGE_BUTTON_value):
+    """
+    
+    :param frame: 
+    :param SELECT_IMAGE_BUTTON_value: 
+    :return: 
+    """
     global NUMBER_PICTURE, EDIT_IMAGE, PANEL_STORAGE, LIMIT_LABEL, NO_PICTURE_SELECTED
-    LIMIT_LABEL = tk.Label(frame, text="You can upload up to four pictures", bg=color, fg="white",
+    LIMIT_LABEL = tk.Label(frame, text="You can upload up to four pictures", bg=COLOR, fg="white",
                            font=("Arial", 12, "bold"), padx=20, pady=20, bd=3,
                            relief=tk.RAISED)
     if NUMBER_PICTURE >= 0:
@@ -179,8 +215,14 @@ def select_image(frame, SELECT_IMAGE_BUTTON_value):
 
 
 def undo_selected_picture(SELECT_IMAGE_BUTTON_value, frame):
+    """
+    
+    :param SELECT_IMAGE_BUTTON_value: 
+    :param frame: 
+    :return: 
+    """
     global STORAGE_PATH_PICTURE, PANEL_STORAGE, NUMBER_PICTURE, LIMIT_LABEL, NO_UNDO_LABEL
-    NO_UNDO_LABEL = tk.Label(frame, text="Cant undo - No picture was selected", bg=color, fg="white",
+    NO_UNDO_LABEL = tk.Label(frame, text="Cant undo - No picture was selected", bg=COLOR, fg="white",
                              font=("Arial", 12, "bold"), padx=20, pady=20,
                              bd=3, relief=tk.RAISED)
     if NUMBER_PICTURE == 0:
@@ -196,6 +238,13 @@ def undo_selected_picture(SELECT_IMAGE_BUTTON_value, frame):
 
 
 def login_function(entry_user_name, entry_password, frame):
+    """
+    
+    :param entry_user_name: 
+    :param entry_password: 
+    :param frame: 
+    :return: 
+    """
     # sends the username and the password to the sever for checking them in the database
     global ACCESS, USER_NAME
     try:
@@ -210,12 +259,12 @@ def login_function(entry_user_name, entry_password, frame):
                                    font=("Arial", 12, "bold"), padx=20,
                                    pady=20, bd=3, relief=tk.RAISED)
         conn.sendall(pickle.dumps(msg))
-        access = pickle.loads(conn.recv(1024))
+        access = pickle.loads(conn.recv(MSG_LEN))
         if access == 'True':
             print(f'Yes - access = {access}')
             USER_NAME = entry_user_name.get()
             frame.master.create_picture_page_frames()
-            frame.master.switch_frame(frame.master.picture_page_frames[0], 2)
+            frame.master.switch_frame(frame.master.picture_page_frames[0], 3)
         elif access == 'Taken':
             print(f'No - access = {access}')
             incorrect_label.destroy()
@@ -231,6 +280,17 @@ def login_function(entry_user_name, entry_password, frame):
 
 
 def marked_image(image, button_image, frame, path, picture_name, pic_ver, image_PIL):
+    """
+    
+    :param image: 
+    :param button_image: 
+    :param frame: 
+    :param path: 
+    :param picture_name: 
+    :param pic_ver: 
+    :param image_PIL: 
+    :return: 
+    """
     global EDIT_IMAGE, BUTTON_IMAGE, IF_IMAGE_PRESSED, EDIT_IMAGE_PATH, \
         SELECTED_IMAGE_TO_EDIT, RESET_BUTTON, picture, NO_PICTURE_WAS_SELECTED_BUTTON, VERSION, IMAGE_PIL, PANEL_EDITED_IMAGE
     SELECTED_IMAGE_TO_EDIT = path
@@ -239,7 +299,7 @@ def marked_image(image, button_image, frame, path, picture_name, pic_ver, image_
     picture = picture_name
     IMAGE_PIL = image_PIL
     if not IF_IMAGE_PRESSED and VERSION == 1:
-        RESET_BUTTON = tk.Button(frame, text="Resets marked picture", bg=color, fg="white",
+        RESET_BUTTON = tk.Button(frame, text="Resets marked picture", bg=COLOR, fg="white",
                                  font=("Arial", 12, "bold"), padx=20, pady=20, bd=3,
                                  relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                                  command=lambda: reset_marked_image())
@@ -256,6 +316,10 @@ def marked_image(image, button_image, frame, path, picture_name, pic_ver, image_
 
 
 def reset_marked_image():
+    """
+    
+    :return: 
+    """
     global BUTTON_IMAGE, EDIT_IMAGE, IF_IMAGE_PRESSED, picture
     if BUTTON_IMAGE is not None:
         EDIT_IMAGE = ''
@@ -266,6 +330,13 @@ def reset_marked_image():
 
 
 def print_pictures(picture_path, frame, what_picture_page):
+    """
+    
+    :param picture_path: 
+    :param frame: 
+    :param what_picture_page: 
+    :return: 
+    """
     global PANEL, COUNT_PICTURE, EDIT_IMAGE_PATH, SELECTED_IMAGE_TO_EDIT, COUNT_PICTURE_VAR2, PANEL_EDITED_IMAGE
     print(f"The pic is: {picture_path}")
     image = picture_path[0]
@@ -319,7 +390,14 @@ def print_pictures(picture_path, frame, what_picture_page):
 
 
 def uploads_pictures_to_server(number_picture, frame, page):
-    global STORAGE_PATH_PICTURE, UPLOAD_PICTURE_BUTTON_picture_PAGE, SELECT_IMAGE_BUTTON, \
+    """
+    
+    :param number_picture: 
+    :param frame: 
+    :param page: 
+    :return: 
+    """
+    global STORAGE_PATH_PICTURE, UPLOAD_PICTURE_BUTTON_PICTURE_PAGE, SELECT_IMAGE_BUTTON, \
         UPLOAD_EDIT_BUTTON, NO_PICTURE_SELECTED, NUMBER_PAGE
     try:
         if NUMBER_PICTURE == 0:
@@ -340,7 +418,7 @@ def uploads_pictures_to_server(number_picture, frame, page):
                 while True:
                     if num_pic != len(STORAGE_PATH_PICTURE):
                         pic = STORAGE_PATH_PICTURE[num_pic]
-                    msg_from_server = pickle.loads(conn.recv(1024))
+                    msg_from_server = pickle.loads(conn.recv(MSG_LEN))
                     if msg_from_server == 'ok':
                         with open(pic[0], 'rb') as f:
                             image_data = f.read()
@@ -353,7 +431,7 @@ def uploads_pictures_to_server(number_picture, frame, page):
                     elif msg_from_server == 'Finish':
                         STORAGE_PATH_PICTURE = []
                         if page == "picture_Page":
-                            UPLOAD_PICTURE_BUTTON_picture_PAGE.config(state='disabled')
+                            UPLOAD_PICTURE_BUTTON_PICTURE_PAGE.config(state='disabled')
                             SELECT_IMAGE_BUTTON.config(state='disabled')
                             NO_PICTURE_SELECTED.destroy()
                             tk.Label(frame, text="You have successfully uploaded the picture to the server", bg="black",
@@ -376,10 +454,14 @@ def uploads_pictures_to_server(number_picture, frame, page):
 
 
 def get_pictures_from_server():
+    """
+    
+    :return: 
+    """
     try:
         msg_pic_to_client = PICTURES_TO_CLIENT_PROTOCOL
         conn.sendall(pickle.dumps(msg_pic_to_client))
-        number_picture = conn.recv(1024)
+        number_picture = conn.recv(MSG_LEN)
         number_picture = int(pickle.loads(number_picture))
         while number_picture > 0:
             image_data = b''
@@ -388,8 +470,8 @@ def get_pictures_from_server():
                 data = conn.recv(4096)
                 if data[-4:][:4] == b'aaaa':
                     conn.sendall(pickle.dumps("got it"))
-                    picture_name = pickle.loads(conn.recv(1024))
-                    picture_version = pickle.loads(conn.recv(1024))
+                    picture_name = pickle.loads(conn.recv(MSG_LEN))
+                    picture_version = pickle.loads(conn.recv(MSG_LEN))
                     image_data += data[:-4]
                     break
                 else:
@@ -416,6 +498,11 @@ def get_pictures_from_server():
 
 
 def download_picture(picture_name):
+    """
+    
+    :param picture_name: 
+    :return: 
+    """
     global SELECTED_IMAGE_TO_EDIT, NAME_FIRST_LABEL
     if picture_name == '':
         NAME_FIRST_LABEL.place(x=1075, y=650, anchor=tk.CENTER, width=250, height=50)
@@ -432,6 +519,10 @@ def download_picture(picture_name):
 
 
 def client_back_to_start():
+    """
+    
+    :return: 
+    """
     try:
         msg = CLIENT_BACK_TO_START_PROTOCOL
         conn.sendall(pickle.dumps(msg))
@@ -442,6 +533,13 @@ def client_back_to_start():
 
 
 def switch_pictures_page(frame, pic_name, num):
+    """
+    
+    :param frame: 
+    :param pic_name: 
+    :param num: 
+    :return: 
+    """
     global NO_PICTURE_WAS_SELECTED_BUTTON
     if num == 1:
         if pic_name == '':
@@ -462,6 +560,13 @@ def switch_pictures_page(frame, pic_name, num):
 
 
 def check_picture_name(path_name, name, frame):
+    """
+    
+    :param path_name: 
+    :param name: 
+    :param frame: 
+    :return: 
+    """
     global DOWN_LOAD_PICTURE_BUTTON, UPLOAD_EDIT_BUTTON, IMAGE_AFTER_EDIT
     if path_name == '':
         no_path = tk.Label(frame, text="Please enter path name to download", bg="black", fg="white",
@@ -485,6 +590,10 @@ def check_picture_name(path_name, name, frame):
 
 # Define the image editing functions
 def grayscale():
+    """
+    
+    :return: 
+    """
     global IMG, UNDO_STACK
     UNDO_STACK.append(IMG)
     IMG = IMG.convert('L')
@@ -492,6 +601,11 @@ def grayscale():
 
 
 def blur(radius):
+    """
+    
+    :param radius: 
+    :return: 
+    """
     global IMG, UNDO_STACK
     if radius == '':
         return
@@ -501,9 +615,15 @@ def blur(radius):
 
 
 def rotate(angle):
+    """
+    
+    :param angle: 
+    :return: 
+    """
     global IMG, UNDO_STACK
     if angle == '':
         return
+    angle = float(angle)
     if type(angle) == float:
         angle = int(angle)
     UNDO_STACK.append(IMG)
@@ -512,6 +632,10 @@ def rotate(angle):
 
 
 def detail():
+    """
+    
+    :return: 
+    """
     global IMG, UNDO_STACK
     UNDO_STACK.append(IMG)
     IMG = IMG.filter(ImageFilter.DETAIL)
@@ -519,6 +643,10 @@ def detail():
 
 
 def mirror():
+    """
+    
+    :return: 
+    """
     global IMG, UNDO_STACK
     UNDO_STACK.append(IMG)
     IMG = ImageOps.mirror(IMG)
@@ -526,6 +654,10 @@ def mirror():
 
 
 def flip():
+    """
+    
+    :return: 
+    """
     global IMG, UNDO_STACK
     UNDO_STACK.append(IMG)
     IMG = ImageOps.flip(IMG)
@@ -533,6 +665,11 @@ def flip():
 
 
 def brightness(level):
+    """
+    
+    :param level: 
+    :return: 
+    """
     global IMG, UNDO_STACK
     if level == '':
         return
@@ -543,6 +680,11 @@ def brightness(level):
 
 
 def contrast(level):
+    """
+    
+    :param level: 
+    :return: 
+    """
     global IMG, UNDO_STACK
     if level == '':
         return
@@ -552,8 +694,34 @@ def contrast(level):
     update_image()
 
 
+def black_white():
+    """
+    
+    :return: 
+    """
+    global IMG, UNDO_STACK
+    UNDO_STACK.append(IMG)
+    IMG = IMG.convert('1')
+    update_image()
+
+
+def invert_effect():
+    """
+    
+    :return: 
+    """
+    global IMG, UNDO_STACK
+    UNDO_STACK.append(IMG)
+    IMG = ImageOps.invert(IMG)
+    update_image()
+
+
 # Define the function to undo the last image editing function
 def undo():
+    """
+    
+    :return: 
+    """
     global IMG, UNDO_STACK
     if len(UNDO_STACK) > 0:
         IMG = UNDO_STACK.pop()
@@ -562,9 +730,14 @@ def undo():
 
 # Define the function to update the image in the GUI
 def update_image():
+    """
+    
+    :return: 
+    """
     global IMG_TK, IMG, NO_EDIT_LABEL, IMAGE_AFTER_EDIT
     IMG_TK = ImageTk.PhotoImage(IMG)
     PANEL_EDITED_IMAGE.config(image=IMG_TK)
+    IMAGE_INFO_LABEL.config(text="Image format: {}\nImage mode: {}\nFile name: {}".format(IMG.format, IMG.mode, format(os.path.basename(EDIT_IMAGE_PATH))))
     IMAGE_AFTER_EDIT = IMG
     if len(UNDO_STACK) == 0:
         NO_EDIT_LABEL.place(x=825, y=550, anchor=tk.CENTER, width=250, height=25)
@@ -574,6 +747,9 @@ def update_image():
 
 
 class MainWindow(tk.Tk):
+    """
+    
+    """
     def __init__(self):
         super().__init__()
         self._frame = None
@@ -583,6 +759,10 @@ class MainWindow(tk.Tk):
         self.switch_frame(StartPage, 1)
 
     def create_picture_page_frames(self):
+        """
+        
+        :return: 
+        """
         self.picture_page_frames = []
         number_of_frames = 1
         global PANEL, STORAGE_PICTURE, COUNT_PICTURE, \
@@ -611,17 +791,17 @@ class MainWindow(tk.Tk):
             tk.Label(self.picture_page_frames[i], text=f"picture Page{i + 1}", bg=BACKGROUND_COLOR, fg="white",
                      font=LARGE_FONT). \
                 place(x=600, y=20, anchor=tk.CENTER, width=1200, height=80)
-            prev_btn = tk.Button(self.picture_page_frames[i], text="Prev", bg=color, fg="white",
+            prev_btn = tk.Button(self.picture_page_frames[i], text="Prev", bg=COLOR, fg="white",
                                  font=("Arial", 12, "bold"), padx=20, pady=20, bd=3,
                                  relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                                  command=lambda idx=i: (
                                      self.switch_frame(self.picture_page_frames[idx - 1], 3), reset_marked_image()))
-            start_btn = tk.Button(self.picture_page_frames[i], text="Start picturesPage1", bg=color, fg="white",
+            start_btn = tk.Button(self.picture_page_frames[i], text="Start picturesPage1", bg=COLOR, fg="white",
                                   font=("Arial", 12, "bold"), padx=20, pady=20, bd=3,
                                   relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                                   command=lambda: (
                                       self.switch_frame(self.picture_page_frames[0], 3), reset_marked_image()))
-            next_btn = tk.Button(self.picture_page_frames[i], text="Next", bg=color, fg="white",
+            next_btn = tk.Button(self.picture_page_frames[i], text="Next", bg=COLOR, fg="white",
                                  font=("Arial", 12, "bold"), padx=20, pady=20, bd=3,
                                  relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                                  command=lambda idx=i: (
@@ -660,17 +840,28 @@ class MainWindow(tk.Tk):
                 start_btn.config(state='disabled')
 
     def create_pictures_page(self):
+        """
+        
+        :return: 
+        """
         for pic in STORAGE_PICTURE:
             frame = PictureSelfPage(self, pic[1])
             self.pictures_frame[pic[1]] = frame
 
     def switch_frame(self, frame_class, number):
+        """
+        
+        :param frame_class: 
+        :param number: 
+        :return: 
+        """
         if number == 1:
             new_frame = frame_class(self)
         else:
             if number == 2:
                 self.picture_page_frames = []
                 self.create_picture_page_frames()
+                frame_class = self.picture_page_frames[0]
             new_frame = frame_class
         if number == CLIENT_BACK_TO_START_PROTOCOL:
             client_back_to_start()
@@ -682,28 +873,34 @@ class MainWindow(tk.Tk):
 
 
 class StartPage(tk.Frame):
+    """
+    
+    """
     def __init__(self, master):
         super().__init__(master)
         self.configure(bg=BACKGROUND_COLOR)
         tk.Label(self, text="Start Page - managing and editing photos", font=LARGE_FONT, fg="White", padx=20, pady=20,
                  bd=3, bg=BACKGROUND_COLOR). \
             place(x=600, y=50, anchor=tk.CENTER, width=1200, height=150)
-        tk.Button(self, text="To Sign up", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20,
+        tk.Button(self, text="To Sign up", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20,
                   pady=20, bd=3,
                   relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                   command=lambda: master.switch_frame(SignUpPage, 1)). \
             place(x=200, y=700, anchor=tk.CENTER, width=400, height=50)
-        tk.Button(self, text="Log in to see pictures", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20,
+        tk.Button(self, text="Log in to see pictures", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20,
                   pady=20, bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                   command=lambda: master.switch_frame(LogInPage, 1)). \
             place(x=600, y=700, anchor=tk.CENTER, width=400, height=50)
-        tk.Button(self, text='GoodBye - To exit', bg=color, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
+        tk.Button(self, text='GoodBye - To exit', bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
                   bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                   command=lambda: exit_window()). \
             place(x=1000, y=700, anchor=tk.CENTER, width=400, height=50)
 
 
 class SignUpPage(tk.Frame):
+    """
+    
+    """
     def __init__(self, master):
         super().__init__(master)
         global SIGN_UP_BUTTON
@@ -725,18 +922,21 @@ class SignUpPage(tk.Frame):
         entry_password = ttk.Entry(self, font=("Arial", 12, "bold"), show='*')
         entry_password. \
             place(x=300, y=400, anchor=tk.CENTER, width=200, height=30)
-        SIGN_UP_BUTTON = tk.Button(self, text="Sign Up", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20,
+        SIGN_UP_BUTTON = tk.Button(self, text="Sign Up", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20,
                                    pady=20, bd=3,
                                    relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                                    command=lambda: signup_function(entry_user_name, entry_password, self))
         SIGN_UP_BUTTON.place(x=200, y=700, anchor=tk.CENTER, width=400, height=50)
-        tk.Button(self, text="Go to Start Page", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
+        tk.Button(self, text="Go to Start Page", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
                   bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                   command=lambda: master.switch_frame(StartPage, CLIENT_BACK_TO_START_PROTOCOL)). \
             place(x=600, y=700, anchor=tk.CENTER, width=400, height=50)
 
 
 class LogInPage(tk.Frame):
+    """
+    
+    """
     def __init__(self, master):
         super().__init__(master)
         self.configure(bg=BACKGROUND_COLOR)
@@ -755,17 +955,20 @@ class LogInPage(tk.Frame):
         entry_password = ttk.Entry(self, font=("Arial", 14, "bold"), show="*")
         entry_password. \
             place(x=300, y=400, anchor=tk.CENTER, width=200, height=30)
-        tk.Button(self, text="=Log in to see the pictures=", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20,
+        tk.Button(self, text="=Log in to see the pictures=", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20,
                   pady=20, bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                   command=lambda: login_function(entry_user_name, entry_password, self)). \
             place(x=200, y=700, anchor=tk.CENTER, width=400, height=50)
-        tk.Button(self, text="Go to Start Page", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
+        tk.Button(self, text="Go to Start Page", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
                   bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                   command=lambda: master.switch_frame(StartPage, CLIENT_BACK_TO_START_PROTOCOL)). \
             place(x=600, y=700, anchor=tk.CENTER, width=400, height=50)
 
 
 class PicturesPage(tk.Frame):
+    """
+    
+    """
     def __init__(self, master):
         super().__init__(master)
         global PANEL, COUNT_PICTURE, \
@@ -775,25 +978,33 @@ class PicturesPage(tk.Frame):
                  pady=20,
                  bd=3, relief=tk.RAISED). \
             place(x=600, y=75, anchor=tk.CENTER, width=200, height=20)
-        tk.Button(self, text="Go to Start Page", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
+        tk.Button(self, text="Go to Start Page", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
                   bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                   command=lambda: master.switch_frame(StartPage, CLIENT_BACK_TO_START_PROTOCOL)). \
             place(x=150, y=700, anchor=tk.CENTER, width=300, height=50)
-        tk.Button(self, text="To upload pictures", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
+        tk.Button(self, text="To upload pictures", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
                   bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                   command=lambda: master.switch_frame(UploadPicturesPage, 1)). \
             place(x=450, y=700, anchor=tk.CENTER, width=300, height=50)
-        tk.Button(self, text="To Edit pictures", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
+        tk.Button(self, text="To Edit pictures", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
                   bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                   command=lambda: switch_pictures_page(self, picture, 2)). \
             place(x=750, y=700, anchor=tk.CENTER, width=300, height=50)
-        tk.Button(self, text="To The picture's page", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20,
+        refresh_button = tk.Button(self, text="To refresh pictures", bg=COLOR, fg="white", font=("Arial", 12, "bold"),
+                                   padx=20, activebackground=BACKGROUND_BUTTON_COLOR, pady=20, bd=3,
+                                   relief=tk.RAISED,
+                                   command=lambda: master.switch_frame(master.picture_page_frames[0], 2))
+        refresh_button.place(x=260, y=645, anchor=tk.CENTER, width=320, height=20)
+        tk.Button(self, text="To The picture's page", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20,
                   pady=20, bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                   command=lambda: switch_pictures_page(self, picture, 1)). \
             place(x=1050, y=700, anchor=tk.CENTER, width=300, height=50)
 
 
 class PictureSelfPage(tk.Frame):
+    """
+    
+    """
     def __init__(self, master, pic_name):
         super().__init__(master)
         global picture, EDIT_IMAGE, RESET_BUTTON, STORAGE_PICTURE, BUTTON_IMAGE, \
@@ -803,22 +1014,22 @@ class PictureSelfPage(tk.Frame):
                  pady=20,
                  bd=3, relief=tk.RAISED). \
             place(x=600, y=20, anchor=tk.CENTER, width=1200, height=80)
-        tk.Button(self, text="Go to Start Page", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
+        tk.Button(self, text="Go to Start Page", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
                   bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                   command=lambda: master.switch_frame(StartPage, CLIENT_BACK_TO_START_PROTOCOL)). \
             place(x=150, y=700, anchor=tk.CENTER, width=300, height=50)
-        tk.Button(self, text="Back to pictures Page", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20,
+        tk.Button(self, text="Back to pictures Page", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20,
                   pady=20, bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                   command=lambda: (master.switch_frame(master.picture_page_frames[0], 3), reset_marked_image())). \
             place(x=450, y=700, anchor=tk.CENTER, width=300, height=50)
         picture_name = ttk.Entry(self, font=("Arial", 12, "bold"))
         picture_name.place(x=500, y=600, anchor=tk.CENTER, width=400, height=30)
-        down_load_picture = tk.Button(self, text="To download the picture", bg=color, fg="white",
+        down_load_picture = tk.Button(self, text="To download the picture", bg=COLOR, fg="white",
                                       font=("Arial", 12, "bold"), padx=20, pady=20, bd=3, relief=tk.RAISED,
                                       activebackground=BACKGROUND_BUTTON_COLOR,
                                       command=lambda: download_picture(picture_name.get()))
         down_load_picture.place(x=750, y=700, anchor=tk.CENTER, width=300, height=50)
-        RESET_BUTTON = tk.Button(self, text="Resets marked picture", bg=color, fg="white", font=("Arial", 12, "bold"),
+        RESET_BUTTON = tk.Button(self, text="Resets marked picture", bg=COLOR, fg="white", font=("Arial", 12, "bold"),
                                  padx=20, pady=20, bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                                  command=lambda: reset_marked_image())
         RESET_BUTTON.place(x=1050, y=700, anchor=tk.CENTER, width=300, height=50)
@@ -850,9 +1061,12 @@ class PictureSelfPage(tk.Frame):
 
 
 class EditPicturesPage(tk.Frame):
+    """
+    
+    """
     def __init__(self, master):
         super().__init__(master)
-        global EDIT_IMAGE, PANEL, EDIT_IMAGE_PATH, UPLOAD_EDIT_BUTTON, picture, NUMBER_PAGE, \
+        global EDIT_IMAGE, PANEL, EDIT_IMAGE_PATH, UPLOAD_EDIT_BUTTON, picture, NUMBER_PAGE, IMAGE_INFO_LABEL, \
             DOWN_LOAD_PICTURE_BUTTON, VERSION, IMAGE_PIL, IMG, IMAGE_AFTER_EDIT, PANEL_EDITED_IMAGE, NO_EDIT_LABEL, NAME_FIRST_LABEL
         self.configure(bg=BACKGROUND_COLOR)
         if NUMBER_PICTURE == 0:
@@ -868,22 +1082,22 @@ class EditPicturesPage(tk.Frame):
         tk.Label(self, text=f"The picture's name is: {picture}", bg=BACKGROUND_COLOR, fg="white",
                  font=("Arial", 12, "bold", "underline"), padx=20, pady=20, bd=3). \
             place(x=600, y=90, anchor=tk.CENTER, width=1200, height=40)
-        UPLOAD_EDIT_BUTTON = tk.Button(self, text="To upload the picture", bg=color, fg="white",
+        UPLOAD_EDIT_BUTTON = tk.Button(self, text="To upload the picture", bg=COLOR, fg="white",
                                        font=("Arial", 12, "bold"), padx=20, pady=20, bd=3,
                                        activebackground=BACKGROUND_BUTTON_COLOR, state='disabled',
                                        command=lambda: (STORAGE_PATH_PICTURE.append((
-                                                                                    f"{SELECTED_IMAGE_TO_EDIT.split('.JPG')[0]}_{picture_name.get().replace(' ', '_')}.JPG",
-                                                                                    f"{picture}-{picture_name.get().replace(' ', '_')}",
-                                                                                    int(VERSION) + 1)),
+                                           f"{SELECTED_IMAGE_TO_EDIT.split('.JPG')[0]}_{picture_name.get().replace(' ', '_')}.JPG",
+                                           f"{picture}-{picture_name.get().replace(' ', '_')}",
+                                           int(VERSION) + 1)),
                                                         print(f"path storage: {STORAGE_PATH_PICTURE}"),
                                                         uploads_pictures_to_server(1, self, "Edit_Page"),
                                                         NAME_FIRST_LABEL.place_forget()))
-        DOWN_LOAD_PICTURE_BUTTON = tk.Button(self, text="To download the picture", bg=color, fg="white",
+        DOWN_LOAD_PICTURE_BUTTON = tk.Button(self, text="To download the picture", bg=COLOR, fg="white",
                                              font=("Arial", 12, "bold"), padx=20, pady=20, bd=3, relief=tk.RAISED,
                                              activebackground=BACKGROUND_BUTTON_COLOR,
                                              command=lambda: download_picture(picture_path_name.get()))
         Are_You_Sure_button_edit_page = tk.Button(self, text="Are you done with the picture?",
-                                                  bg=color, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
+                                                  bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
                                                   bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                                                   command=lambda: (check_picture_name(picture_path_name.get(),
                                                                                       picture_name.get(), self)))
@@ -891,7 +1105,7 @@ class EditPicturesPage(tk.Frame):
         DOWN_LOAD_PICTURE_BUTTON.place(x=750, y=700, anchor=tk.CENTER, width=300, height=50)
         UPLOAD_EDIT_BUTTON.place(x=450, y=700, anchor=tk.CENTER, width=300, height=50)
         if EDIT_IMAGE == '':
-            tk.Label(self, text="No picture was selected", bg=color, fg="white",
+            tk.Label(self, text="No picture was selected", bg=COLOR, fg="white",
                      font=("Arial", 12, "bold"), padx=20,
                      pady=20, bd=3, relief=tk.RAISED). \
                 place(x=600, y=90, anchor=tk.CENTER, width=200, height=40)
@@ -909,9 +1123,10 @@ class EditPicturesPage(tk.Frame):
                      pady=20, bd=3, relief=tk.RAISED). \
                 place(x=225, y=635, anchor=tk.CENTER, width=450, height=30)
             picture_name.place(x=600, y=635, anchor=tk.CENTER, width=300, height=30)
-        tk.Button(self, text="Back to pictures Page", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20,
+        tk.Button(self, text="Back to pictures Page", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20,
                   pady=20, bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
-                  command=lambda: (master.switch_frame(master.picture_page_frames[0], NUMBER_PAGE), reset_marked_image())). \
+                  command=lambda: (
+                      master.switch_frame(master.picture_page_frames[0], NUMBER_PAGE), reset_marked_image())). \
             place(x=150, y=700, anchor=tk.CENTER, width=300, height=50)
         NAME_FIRST_LABEL = tk.Label(self, text='You need to enter name first', bg="black", fg="white",
                                     font=("Arial", 12, "bold"), padx=20, pady=20, bd=3, relief=tk.RAISED)
@@ -924,7 +1139,7 @@ class EditPicturesPage(tk.Frame):
             PANEL.configure(image=EDIT_IMAGE)
             PANEL.image = EDIT_IMAGE
         PANEL = None
-        grayscale_button = tk.Button(self, text="Grayscale", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20,
+        grayscale_button = tk.Button(self, text="Grayscale", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20,
                                      pady=20, bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                                      command=grayscale)
         grayscale_button.place(x=575, y=450, anchor=tk.CENTER, width=200, height=25)
@@ -933,7 +1148,7 @@ class EditPicturesPage(tk.Frame):
         blur_label.place(x=1075, y=200, anchor=tk.CENTER, width=200, height=25)
         blur_spinbox = Spinbox(self, from_=0, to=10, increment=0.1, format="%.2f", width=8)
         blur_spinbox.place(x=1075, y=250, anchor=tk.CENTER, width=200, height=25)
-        blur_button = tk.Button(self, text="Blur", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
+        blur_button = tk.Button(self, text="Blur", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
                                 bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                                 command=lambda: blur(float(blur_spinbox.get())))
         blur_button.place(x=1075, y=300, anchor=tk.CENTER, width=200, height=25)
@@ -942,16 +1157,16 @@ class EditPicturesPage(tk.Frame):
         rotate_label.place(x=1075, y=350, anchor=tk.CENTER, width=200, height=25)
         rotate_entry = tk.Entry(self)
         rotate_entry.place(x=1075, y=400, anchor=tk.CENTER, width=200, height=25)
-        rotate_button = tk.Button(self, text="Rotate", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20,
+        rotate_button = tk.Button(self, text="Rotate", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20,
                                   pady=20, bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
-                                  command=lambda: rotate(float((rotate_entry.get()))))
+                                  command=lambda: rotate((rotate_entry.get())))
         rotate_button.place(x=1075, y=450, anchor=tk.CENTER, width=200, height=25)
 
         brightness_label = tk.Label(self, text="Brightness level:")
         brightness_label.place(x=825, y=200, anchor=tk.CENTER, width=200, height=25)
         brightness_spinbox = Spinbox(self, from_=0, to=10, increment=0.1, format="%.2f", width=8)
         brightness_spinbox.place(x=825, y=250, anchor=tk.CENTER, width=200, height=25)
-        brightness_button = tk.Button(self, text="Brightness", bg=color, fg="white", font=("Arial", 12, "bold"),
+        brightness_button = tk.Button(self, text="Brightness", bg=COLOR, fg="white", font=("Arial", 12, "bold"),
                                       padx=20, pady=20, bd=3, relief=tk.RAISED,
                                       activebackground=BACKGROUND_BUTTON_COLOR,
                                       command=lambda: brightness(brightness_spinbox.get()))
@@ -961,33 +1176,43 @@ class EditPicturesPage(tk.Frame):
         contrast_label.place(x=825, y=350, anchor=tk.CENTER, width=200, height=25)
         contrast_spinbox = Spinbox(self, from_=0, to=10, increment=0.1, format="%.2f", width=8)
         contrast_spinbox.place(x=825, y=400, anchor=tk.CENTER, width=200, height=25)
-        contrast_button = tk.Button(self, text="Contrast", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20,
+        contrast_button = tk.Button(self, text="Contrast", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20,
                                     pady=20, bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                                     command=lambda: contrast(contrast_spinbox.get()))
         contrast_button.place(x=825, y=450, anchor=tk.CENTER, width=200, height=25)
 
-        resize_width_label = tk.Label(self, text="New width:")
-        resize_width_label.place(x=575, y=200, anchor=tk.CENTER, width=200, height=25)
-        resize_width_entry = tk.Entry(self)
-        resize_width_entry.place(x=575, y=250, anchor=tk.CENTER, width=200, height=25)
+        bw_button = tk.Button(self, text="Black and white", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20,
+                              pady=20, bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
+                              command=lambda: black_white())
+        bw_button.place(x=575, y=200, anchor=tk.CENTER, width=200, height=25)
 
-        mirror_button = tk.Button(self, text="Mirror", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20,
+        invert_button = tk.Button(self, text="Apply Invert Effect", bg=COLOR, fg="white", font=("Arial", 12, "bold"),
+                                  padx=20,
+                                  pady=20, bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
+                                  command=lambda: invert_effect())
+        invert_button.place(x=575, y=250, anchor=tk.CENTER, width=200, height=25)
+
+        mirror_button = tk.Button(self, text="Mirror", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20,
                                   pady=20, bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                                   command=lambda: mirror())
         mirror_button.place(x=575, y=300, anchor=tk.CENTER, width=200, height=25)
-        flip_button = tk.Button(self, text="Flip", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20,
+        flip_button = tk.Button(self, text="Flip", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20,
                                 pady=20, bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                                 command=lambda: flip())
         flip_button.place(x=575, y=350, anchor=tk.CENTER, width=200, height=25)
-        detail_button = tk.Button(self, text="Detail", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20,
+        detail_button = tk.Button(self, text="Detail", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20,
                                   pady=20, bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                                   command=lambda: detail())
         detail_button.place(x=575, y=400, anchor=tk.CENTER, width=200, height=25)
 
         # Create the button to undo the last image editing function
-        undo_button = tk.Button(self, text="Undo", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
+        undo_button = tk.Button(self, text="Undo", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
                                 bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR, command=undo)
         undo_button.place(x=825, y=500, anchor=tk.CENTER, width=200, height=25)
+
+        IMAGE_INFO_LABEL = tk.Label(self,
+                                    text="Image format: {}\nImage mode: {}\nFile name: {}".format(IMG.format, IMG.mode, format(os.path.basename(EDIT_IMAGE_PATH))))
+        IMAGE_INFO_LABEL.place(x=1075, y=500, anchor=tk.CENTER, width=200, height=50)
 
         NO_EDIT_LABEL = tk.Label(self, text="No change has been done", bg="black", fg="white",
                                  font=("Arial", 12, "bold"), padx=20, pady=20,
@@ -996,51 +1221,58 @@ class EditPicturesPage(tk.Frame):
 
 
 class UploadPicturesPage(tk.Frame):
+    """
+    
+    """
     def __init__(self, master):
         super().__init__(master)
-        global NUMBER_PICTURE, STORAGE_PATH_PICTURE, UPLOAD_PICTURE_BUTTON_picture_PAGE, SELECT_IMAGE_BUTTON, EDIT_IMAGE, \
+        global NUMBER_PICTURE, STORAGE_PATH_PICTURE, UPLOAD_PICTURE_BUTTON_PICTURE_PAGE, SELECT_IMAGE_BUTTON, EDIT_IMAGE, \
             PANEL_STORAGE, NO_PICTURE_SELECTED, NUMBER_PAGE
         self.configure(bg=BACKGROUND_COLOR)
 
-        NO_PICTURE_SELECTED = tk.Label(self, text="No picture was selected", bg=color, fg="white",
+        NO_PICTURE_SELECTED = tk.Label(self, text="No picture was selected", bg=COLOR, fg="white",
                                        font=("Arial", 12, "bold"), padx=20, pady=20,
                                        bd=3, relief=tk.RAISED)
         tk.Label(self, text="Upload pictures Page", bg=BACKGROUND_COLOR, fg="white", font=LARGE_FONT, padx=20,
                  pady=20, bd=3). \
             place(x=600, y=20, anchor=tk.CENTER, width=1200, height=80)
-        tk.Label(self, text="You can upload up to four pictures", bg=color, fg="white", font=("Arial", 12, "bold"),
+        tk.Label(self, text="You can upload up to four pictures", bg=COLOR, fg="white", font=("Arial", 12, "bold"),
                  bd=3, highlightbackground="black", highlightthickness=2). \
             place(x=180, y=665, anchor=tk.CENTER, width=300, height=20)
-        tk.Button(self, text="Go to Start Page", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
+        tk.Button(self, text="Go to Start Page", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
                   bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                   command=lambda: master.switch_frame(StartPage, CLIENT_BACK_TO_START_PROTOCOL)). \
             place(x=1080, y=700, anchor=tk.CENTER, width=240, height=50)
-        SELECT_IMAGE_BUTTON = tk.Button(self, text="Select Image", bg=color, fg="white", font=("Arial", 12, "bold"),
+        SELECT_IMAGE_BUTTON = tk.Button(self, text="Select Image", bg=COLOR, fg="white", font=("Arial", 12, "bold"),
                                         padx=20, pady=20, bd=3, relief=tk.RAISED,
                                         activebackground=BACKGROUND_BUTTON_COLOR,
                                         command=lambda: select_image(self, SELECT_IMAGE_BUTTON))
-        UPLOAD_PICTURE_BUTTON_picture_PAGE = tk.Button(self, text="Upload", bg=color, fg="white",
+        UPLOAD_PICTURE_BUTTON_PICTURE_PAGE = tk.Button(self, text="Upload", bg=COLOR, fg="white",
                                                        font=("Arial", 12, "bold"), padx=20, pady=20, bd=3,
                                                        relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                                                        command=lambda: (uploads_pictures_to_server
                                                                         (NUMBER_PICTURE, self,
                                                                          "picture_Page")))
-        undo_upload_button = tk.Button(self, text="Undo recent pic", bg=color, fg="white",
+        undo_upload_button = tk.Button(self, text="Undo recent pic", bg=COLOR, fg="white",
                                        font=("Arial", 12, "bold"), padx=20, pady=20, bd=3,
                                        relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
                                        command=lambda: undo_selected_picture(SELECT_IMAGE_BUTTON, self))
-        tk.Button(self, text="To pictures page", bg=color, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
+        tk.Button(self, text="To pictures page", bg=COLOR, fg="white", font=("Arial", 12, "bold"), padx=20, pady=20,
                   bd=3, relief=tk.RAISED, activebackground=BACKGROUND_BUTTON_COLOR,
-                  command=lambda: master.switch_frame(master.picture_page_frames[0], NUMBER_PAGE)). \
+                  command=lambda: master.switch_frame(master.picture_page_frames[0], 2)). \
             place(x=120, y=700, anchor=tk.CENTER, width=240, height=50)
 
         NUMBER_PICTURE = 0
         undo_upload_button.place(x=840, y=700, anchor=tk.CENTER, width=240, height=50)
-        UPLOAD_PICTURE_BUTTON_picture_PAGE.place(x=360, y=700, anchor=tk.CENTER, width=240, height=50)
+        UPLOAD_PICTURE_BUTTON_PICTURE_PAGE.place(x=360, y=700, anchor=tk.CENTER, width=240, height=50)
         SELECT_IMAGE_BUTTON.place(x=600, y=700, anchor=tk.CENTER, width=240, height=50)
 
 
 def running_gui():
+    """
+    
+    :return: 
+    """
     global root
     root.title("pictures for your day")
     root.minsize(1200, 800)
@@ -1064,14 +1296,14 @@ if __name__ == '__main__':
     my_socket = socket.socket()
     conn = context.wrap_socket(my_socket, server_hostname=HOST_NAME)
     try:
-        result = conn.connect_ex((HOST_NAME, PORT))
+        RESULT = conn.connect_ex((HOST_NAME, PORT))
         print("Connected to Server: ", conn.getsockname())
         running_gui()
     except socket.error as socket_err:
         print(f"Something came up: {socket_err}")
     finally:
-        result = my_socket.connect_ex((HOST_NAME, PORT))
-        if result == 0:
+        RESULT = my_socket.connect_ex((HOST_NAME, PORT))
+        if RESULT == 0:
             exit_window()
         conn.close()
         quit()
