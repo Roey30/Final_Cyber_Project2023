@@ -1,4 +1,6 @@
-#!/usr/bin/env python3
+"""
+
+"""
 import io
 import os
 import socket
@@ -19,6 +21,8 @@ import sqlite3
 # confirmation for the login (if the user and the password are indeed in the DataBase)
 # receives the storage of pictures from the server
 
+# CONSTANTS:
+# CONNECTIONS VARIABLES:
 IP_ADDR = '0.0.0.0'
 PORT = 8443
 QUEUE_LEN = 1
@@ -26,16 +30,19 @@ PACKET_LEN = 1024
 CERT_FILE = 'certificate.crt'
 KEY_FILE = 'privateKey.key'
 
+# LISTS OF VARIABLES:
 PASSWORD_STORAGE = []  # pa
 USERNAME_STORAGE = []  # us
 PICTURES_STORAGE = []  # pi
 
+# CONNECTIONS PROTOCOL:
 PICTURES_TO_SERVER_PROTOCOL = 'ptsp'
 PICTURES_TO_CLIENT_PROTOCOL = 'ptcp'
 LOG_IN_CLIENT_PROTOCOL = 'LICP'
 SIGN_UP_CLIENT_PROTOCOL = 'SICP'
 CLIENT_BACK_TO_START_PROTOCOL = 'CBTSP'
 
+# THREAD VARIABLES:
 gDict = {}
 userDict = {}
 
@@ -43,12 +50,15 @@ PHOTOS_SAVED_FILE = 'PhotosToServer'
 
 
 def sign_in(username, password, c):
-    permission = False
+    """
+
+    :param username:
+    :param password:
+    :param c:
+    :return:
+    """
     hashed_password = hashlib.md5(password.encode()).hexdigest()
 
-    if username == 'RoeyFiran':
-        if password == 'RoeyFiran12345':
-            permission = True
     exist = exist_signin_check(username)
     if exist == 'True':
         c.sendall(pickle.dumps('True'))
@@ -57,8 +67,8 @@ def sign_in(username, password, c):
         connection_data = sqlite3.connect("username_password_storage.db")
         cursor = connection_data.cursor()
 
-        cursor.execute("INSERT INTO username_password_storage (name, password, permission) VALUES (?, ?, ?)",
-                       (username, hashed_password, permission))
+        cursor.execute("INSERT INTO username_password_storage (name, password) VALUES (?, ?)",
+                       (username, hashed_password))
         connection_data.commit()
         connection_data.close()
 
@@ -69,6 +79,13 @@ def sign_in(username, password, c):
 
 
 def log_in(username, password, c):
+    """
+
+    :param username:
+    :param password:
+    :param c:
+    :return:
+    """
     global USERNAME_STORAGE, PASSWORD_STORAGE
     hashed_password = hashlib.md5(password.encode()).hexdigest()
 
@@ -107,6 +124,11 @@ def log_in(username, password, c):
 
 
 def client_back_to_start(c):
+    """
+
+    :param c:
+    :return:
+    """
     global userDict
 
     if len(userDict) != 0:
@@ -117,6 +139,11 @@ def client_back_to_start(c):
 
 
 def exist_signin_check(username):
+    """
+
+    :param username:
+    :return:
+    """
     exist = False
     conn = sqlite3.connect("username_password_storage.db")
     name = conn.cursor()
@@ -136,6 +163,12 @@ def exist_signin_check(username):
 
 
 def serverside_picture_handle(c, number_pictures):
+    """
+
+    :param c:
+    :param number_pictures:
+    :return:
+    """
     try:
         number_pictures = int(number_pictures)
         while number_pictures > 0:
@@ -181,6 +214,11 @@ def serverside_picture_handle(c, number_pictures):
 
 
 def clientside_picture_handle(c):
+    """
+
+    :param c:
+    :return:
+    """
     try:
         connection_data = sqlite3.connect("picture_database.db")
         cursor = connection_data.cursor()
@@ -213,6 +251,11 @@ def clientside_picture_handle(c):
 
 
 def receive(c):
+    """
+
+    :param c:
+    :return:
+    """
     try:
         while True:
             # data received from client
@@ -260,6 +303,12 @@ def receive(c):
 
 
 def broadcast(c, data):
+    """
+
+    :param c:
+    :param data:
+    :return:
+    """
     # print(" | ".join(str(i) for i in gDict.values()))
     print(f"gDict: {gDict}")
     for connection in gDict:
@@ -283,6 +332,10 @@ def broadcast(c, data):
 
 
 def main():
+    """
+
+    :return:
+    """
     # Local host: '127.0.0.1'
 
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -324,7 +377,10 @@ def main():
 
 
 if __name__ == '__main__':
+    """
+    """
     # Check if folder exists
+    PHOTOS_SAVED_FILE = 'PhotosToServer'
     if not os.path.exists(PHOTOS_SAVED_FILE):
         # Create folder if it does not exist
         os.makedirs(PHOTOS_SAVED_FILE)
@@ -336,9 +392,9 @@ if __name__ == '__main__':
     entries = user.fetchall()
 
     print("Users DataBase:")
-    print("ID - Name - password - permission(1-True, 0-False)")
+    print("ID - USERNAME - PASSWORD")
     for entry in entries:
-        print(f"{entry[0]}: {entry[1]} - {entry[2]} - {entry[3]}")
+        print(f"{entry[0]}: {entry[1]} - {entry[2]}")
 
     connect_data.close()
 
@@ -349,7 +405,7 @@ if __name__ == '__main__':
     entries = user.fetchall()
 
     print("Photos DataBase:")
-    print("ID - Name - FILE_PATH - VALUES")
+    print("ID - NAME - FILE_PATH - VALUES")
     for entry in entries:
         print(f"{entry[0]}: {entry[1]} - {entry[2]} - {entry[3]}")
 
